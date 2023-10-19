@@ -10,23 +10,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func CreateAccount(t *testing.T) Account{
+func CreateAccount(t *testing.T) Account {
 	arg := CreateAccountParams{
-		Owner: util.RandOwner(),
-		Balance: util.RandMoney(),
+		Owner:    util.RandOwner(),
+		Balance:  util.RandMoney(),
 		Currency: util.RandCurrency(),
 	}
 
-	account, err := testQueries.CreateAccount(context.Background(),arg)
+	account, err := testQueries.CreateAccount(context.Background(), arg)
 
-	require.NoError(t,err)
-	require.NotEmpty(t,account)
+	require.NoError(t, err)
+	require.NotEmpty(t, account)
 
-	require.Equal(t,arg.Owner,account.Owner)
+	require.Equal(t, arg.Owner, account.Owner)
 	require.Equal(t, arg.Balance, account.Balance)
-    require.Equal(t, arg.Currency, account.Currency)
-	require.NotZero(t,account.ID)
-	require.NotZero(t,account.CreatedAt)
+	require.Equal(t, arg.Currency, account.Currency)
+	require.NotZero(t, account.ID)
+	require.NotZero(t, account.CreatedAt)
 
 	return account
 }
@@ -38,30 +38,30 @@ func TestCreateAccount(t *testing.T) {
 func TestGetAccount(t *testing.T) {
 	account1 := CreateAccount(t)
 
-	account2 , err := testQueries.GetAccount(context.Background(),account1.ID)
+	account2, err := testQueries.GetAccount(context.Background(), account1.ID)
 
-	require.NoError(t,err)
-	require.NotEmpty(t,account2)
+	require.NoError(t, err)
+	require.NotEmpty(t, account2)
 
 	require.Equal(t, account1.ID, account2.ID)
-    require.Equal(t, account1.Owner, account2.Owner)
-    require.Equal(t, account1.Balance, account2.Balance)
-    require.Equal(t, account1.Currency, account2.Currency)
-    require.WithinDuration(t, account1.CreatedAt, account2.CreatedAt, time.Second)
+	require.Equal(t, account1.Owner, account2.Owner)
+	require.Equal(t, account1.Balance, account2.Balance)
+	require.Equal(t, account1.Currency, account2.Currency)
+	require.WithinDuration(t, account1.CreatedAt, account2.CreatedAt, time.Second)
 }
 
 func TestUpdateAccount(t *testing.T) {
 	account1 := CreateAccount(t)
-	arg := UpdateAccountParams{Balance: util.RandMoney(),ID: account1.ID}
-	account2, err := testQueries.UpdateAccount(context.Background(),arg)
+	arg := UpdateAccountParams{Balance: util.RandMoney(), ID: account1.ID}
+	account2, err := testQueries.UpdateAccount(context.Background(), arg)
 
-	require.NoError(t,err)
-	require.NotEmpty(t,account2)
+	require.NoError(t, err)
+	require.NotEmpty(t, account2)
 	require.Equal(t, account1.ID, account2.ID)
-    require.Equal(t, account1.Owner, account2.Owner)
-	require.Equal(t,arg.Balance,account2.Balance)
+	require.Equal(t, account1.Owner, account2.Owner)
+	require.Equal(t, arg.Balance, account2.Balance)
 	require.Equal(t, account1.Currency, account2.Currency)
-	require.WithinDuration(t,account2.CreatedAt,account1.CreatedAt,time.Second)
+	require.WithinDuration(t, account2.CreatedAt, account1.CreatedAt, time.Second)
 }
 
 func TestDelectAccount(t *testing.T) {
@@ -69,28 +69,28 @@ func TestDelectAccount(t *testing.T) {
 
 	err := testQueries.DeleteAccount(context.Background(), account1.ID)
 
-	require.NoError(t,err)
-	
-	account2, err := testQueries.GetAccount(context.Background(),account1.ID)
-	require.Error(t,err)
-	require.EqualError(t,err,sql.ErrNoRows.Error())
-	require.Empty(t,account2)
+	require.NoError(t, err)
+
+	account2, err := testQueries.GetAccount(context.Background(), account1.ID)
+	require.Error(t, err)
+	require.EqualError(t, err, sql.ErrNoRows.Error())
+	require.Empty(t, account2)
 }
 
 func TestListAccounts(t *testing.T) {
-	for i:=0 ; i < 10; i++ {
+	for i := 0; i < 10; i++ {
 		CreateAccount(t)
 	}
 
-	arg := ListAccountsParams{Limit: 5,Offset: 5}
+	arg := ListAccountsParams{Limit: 5, Offset: 5}
 
-	accounts, err := testQueries.ListAccounts(context.Background(),arg)
+	accounts, err := testQueries.ListAccounts(context.Background(), arg)
 
-	require.NoError(t,err)
-	require.NotEmpty(t,accounts)
-	require.Len(t,accounts,5)
+	require.NoError(t, err)
+	require.NotEmpty(t, accounts)
+	require.Len(t, accounts, 5)
 
 	for _, account := range accounts {
-		require.NotEmpty(t,account)
+		require.NotEmpty(t, account)
 	}
 }
