@@ -41,12 +41,12 @@ jobs:
 
     - name: Install golang-migrate
       run : |
-        curl -L https://github.com/golang-migrate/migrate/releases/download/v4.16.2/migrate.darwin-amd64.tar.gz | tar xvz
+        curl -L https://github.com/golang-migrate/migrate/releases/download/v4.16.2/migrate.linux-amd64.tar.gz | tar xvz
         sudo mv migrate /usr/bin
         which migrate
 
     - name: Run migrations
-      run: migrate -path db/migration -database "postgresql://root:secret@localhost:5432/simple_bank?sslmode=disable" -verbose up
+      run: make migrateup
     
     - name: Test
       run: make 
