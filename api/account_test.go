@@ -137,6 +137,45 @@ func TestCreateAccountAPI(t *testing.T) {
 			},
 			newRequest: newRequest,
 		},
+		{
+			name: "InvalidCurrency",
+			request: gin.H{
+				"ownwe":    account.Owner,
+				"currency": "HK",
+			},
+			bulidStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					CreateAccount(gomock.Any(),gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t,http.StatusBadRequest,recorder.Code)
+			},
+			newRequest: newRequest,
+		},
+		{
+			name: "InternalError",
+			request: gin.H{
+				"owner":    account.Owner,
+				"currency": account.Currency,
+			},
+			bulidStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					CreateAccount(
+						gomock.Any(),
+						gomock.Eq(db.CreateAccountParams{
+							Owner: account.Owner,
+							Currency: account.Currency,
+							Balance: int64(0),
+						})).
+					Times(1).
+					Return(db.Account{},sql.ErrConnDone)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t,http.StatusInternalServerError,recorder.Code)
+			},
+			newRequest: newRequest,
+		},
 	}
 
 	runTestCases(t, testCases)
@@ -178,7 +217,7 @@ func TestListAcoountsAPI(t *testing.T) {
 						gomock.Any(),
 						gomock.Eq(db.ListAccountsParams{
 							Offset: (pageID - 1) * pageSize,
-							Limit:  int32(pageSize),
+							Limit:  pageSize,
 						})).
 					Times(1).
 					Return(accounts, nil)
@@ -186,6 +225,44 @@ func TestListAcoountsAPI(t *testing.T) {
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, recorder.Code)
 				requireBodyMatchAccounts(t, recorder.Body, accounts)
+			},
+			newRequest: newRequest,
+		},
+		{
+			name: "InvalidID",
+			request: gin.H{
+				"page_id":   int32(0),
+				"page_size": pageSize,
+			},
+			bulidStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					ListAccounts(gomock.Any(),gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t,http.StatusBadRequest,recorder.Code)
+			},
+			newRequest: newRequest,
+		},
+		{
+			name: "InternalError",
+			request: gin.H{
+				"page_id":   pageID,
+				"page_size": pageSize,
+			},
+			bulidStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					ListAccounts(
+						gomock.Any(),
+						gomock.Eq(db.ListAccountsParams{
+							Offset: (pageID - 1) * pageSize,
+							Limit:  pageSize,
+						})).
+					Times(1).
+					Return([]db.Account{},sql.ErrConnDone)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t,http.StatusInternalServerError,recorder.Code)
 			},
 			newRequest: newRequest,
 		},
