@@ -28,7 +28,7 @@ type TestCase struct {
 func TestGetAccountAPI(t *testing.T) {
 	account := randomAccount()
 
-	testCases := []TestCase{
+	testCases := []*TestCase{
 		{
 			name: "OK",
 			request: gin.H{
@@ -100,7 +100,7 @@ func TestGetAccountAPI(t *testing.T) {
 
 func TestCreateAccountAPI(t *testing.T) {
 	account := randomAccount()
-	testCases := []TestCase{
+	testCases := []*TestCase{
 		{
 			name: "OK",
 			request: gin.H{
@@ -143,7 +143,7 @@ func TestListAcoountsAPI(t *testing.T) {
 		accounts[i] = randomAccount()
 	}
 
-	testCases := []TestCase{
+	testCases := []*TestCase{
 		{
 			name: "OK",
 			request: gin.H{
@@ -213,7 +213,7 @@ func requireBodyMatchAccounts(t *testing.T, body *bytes.Buffer, accounts []db.Ac
 	require.Equal(t, accounts, gotAccounts)
 }
 
-func runTestCases(t *testing.T, testCases []TestCase, newRequest func(testCase *TestCase) (request *http.Request, err error)) {
+func runTestCases(t *testing.T, testCases []*TestCase, newRequest func(testCase *TestCase) (request *http.Request, err error)) {
 	for i := range testCases {
 		tc := testCases[i]
 		t.Run(tc.name, func(t *testing.T) {
@@ -228,7 +228,7 @@ func runTestCases(t *testing.T, testCases []TestCase, newRequest func(testCase *
 			server := NewServer((store))
 			recorder := httptest.NewRecorder()
 
-			request, err := newRequest(&tc)
+			request, err := newRequest(tc)
 			require.NoError(t, err)
 			server.router.ServeHTTP(recorder, request)
 
