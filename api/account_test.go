@@ -23,11 +23,16 @@ type TestCase struct {
 	request       gin.H
 	bulidStubs    func(store *mockdb.MockStore)
 	checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
+	newRequest    func(testCase *TestCase) (request *http.Request, err error)
 }
 
 func TestGetAccountAPI(t *testing.T) {
 	account := randomAccount()
-
+	newRequest := func(testCase *TestCase) (request *http.Request, err error) {
+		url := fmt.Sprintf("/account/%d", testCase.request["accountID"])
+		request, err = http.NewRequest(http.MethodGet, url, nil)
+		return
+	}
 	testCases := []*TestCase{
 		{
 			name: "OK",
@@ -44,6 +49,7 @@ func TestGetAccountAPI(t *testing.T) {
 				require.Equal(t, http.StatusOK, recorder.Code)
 				requireBodyMatchAccount(t, recorder.Body, account)
 			},
+			newRequest: newRequest,
 		},
 		{
 			name: "NotFound",
@@ -59,6 +65,7 @@ func TestGetAccountAPI(t *testing.T) {
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusNotFound, recorder.Code)
 			},
+			newRequest: newRequest,
 		},
 		{
 			name: "InternalError",
@@ -74,6 +81,7 @@ func TestGetAccountAPI(t *testing.T) {
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, recorder.Code)
 			},
+			newRequest: newRequest,
 		},
 		{
 			name: "InvalidID",
@@ -88,18 +96,22 @@ func TestGetAccountAPI(t *testing.T) {
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusBadRequest, recorder.Code)
 			},
+			newRequest: newRequest,
 		},
 	}
 
-	runTestCases(t, testCases, func(testCase *TestCase) (request *http.Request, err error) {
-		url := fmt.Sprintf("/account/%d", testCase.request["accountID"])
-		request, err = http.NewRequest(http.MethodGet, url, nil)
-		return
-	})
+	runTestCases(t, testCases)
 }
 
 func TestCreateAccountAPI(t *testing.T) {
 	account := randomAccount()
+	newRequest := func(testCase *TestCase) (request *http.Request, err error) {
+		data, err := json.Marshal(testCase.request)
+		require.NoError(t, err)
+		url := "/account"
+		request, err = http.NewRequest(http.MethodPost, url, bytes.NewReader(data))
+		return
+	}
 	testCases := []*TestCase{
 		{
 			name: "OK",
@@ -123,16 +135,11 @@ func TestCreateAccountAPI(t *testing.T) {
 				require.Equal(t, http.StatusOK, recorder.Code)
 				requireBodyMatchAccount(t, recorder.Body, account)
 			},
+			newRequest: newRequest,
 		},
 	}
 
-	runTestCases(t, testCases, func(testCase *TestCase) (request *http.Request, err error) {
-		data, err := json.Marshal(testCase.request)
-		require.NoError(t, err)
-		url := "/account"
-		request, err = http.NewRequest(http.MethodPost, url, bytes.NewReader(data))
-		return
-	})
+	runTestCases(t, testCases)
 }
 
 func TestListAcoountsAPI(t *testing.T) {
@@ -141,6 +148,21 @@ func TestListAcoountsAPI(t *testing.T) {
 	accounts := make([]db.Account, pageSize)
 	for i := int32(0); i < pageSize; i++ {
 		accounts[i] = randomAccount()
+	}
+	newRequest := func(testCase *TestCase) (request *http.Request, err error) {
+		url := fmt.Sprintf("/account?page_id=%d&page_size=%d", testCase.request["page_id"], testCase.request["page_size"])
+		request, err = http.NewRequest(http.MethodGet, url, nil)
+
+		/* request, err = http.NewRequest(http.MethodGet, url, nil)
+		require.NoError(t, err)
+
+		// Add query parameters to request URL
+		q := request.URL.Query()
+		q.Add("page_id", fmt.Sprintf("%d", testCase.request["page_id"]))
+		q.Add("page_size", fmt.Sprintf("%d", testCase.request["page_size"]))
+		request.URL.RawQuery = q.Encode() */
+
+		return
 	}
 
 	testCases := []*TestCase{
@@ -165,24 +187,11 @@ func TestListAcoountsAPI(t *testing.T) {
 				require.Equal(t, http.StatusOK, recorder.Code)
 				requireBodyMatchAccounts(t, recorder.Body, accounts)
 			},
+			newRequest: newRequest,
 		},
 	}
 
-	runTestCases(t, testCases, func(testCase *TestCase) (request *http.Request, err error) {
-		url := fmt.Sprintf("/account?page_id=%d&page_size=%d", testCase.request["page_id"], testCase.request["page_size"])
-		request, err = http.NewRequest(http.MethodGet, url, nil)
-
-		/* request, err = http.NewRequest(http.MethodGet, url, nil)
-		require.NoError(t, err)
-
-		// Add query parameters to request URL
-		q := request.URL.Query()
-		q.Add("page_id", fmt.Sprintf("%d", testCase.request["page_id"]))
-		q.Add("page_size", fmt.Sprintf("%d", testCase.request["page_size"]))
-		request.URL.RawQuery = q.Encode() */
-
-		return
-	})
+	runTestCases(t, testCases)
 }
 
 func randomAccount() db.Account {
@@ -213,10 +222,11 @@ func requireBodyMatchAccounts(t *testing.T, body *bytes.Buffer, accounts []db.Ac
 	require.Equal(t, accounts, gotAccounts)
 }
 
-func runTestCases(t *testing.T, testCases []*TestCase, newRequest func(testCase *TestCase) (request *http.Request, err error)) {
+func runTestCases(t *testing.T, testCases []*TestCase) {
 	for i := range testCases {
 		tc := testCases[i]
 		t.Run(tc.name, func(t *testing.T) {
+			//mock store
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			store := mockdb.NewMockStore(ctrl)
@@ -224,12 +234,14 @@ func runTestCases(t *testing.T, testCases []*TestCase, newRequest func(testCase 
 			//bulid stubs
 			tc.bulidStubs(store)
 
-			//start test server and send request
-			server := NewServer((store))
-			recorder := httptest.NewRecorder()
-
-			request, err := newRequest(tc)
+			//new request
+			request, err := tc.newRequest(tc)
 			require.NoError(t, err)
+			//new recorder as response
+			recorder := httptest.NewRecorder()
+			//start test server
+			server := NewServer((store))
+			//send request
 			server.router.ServeHTTP(recorder, request)
 
 			//check response
