@@ -18,13 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type TestCase struct {
-	name          string
-	request       gin.H
-	bulidStubs    func(store *mockdb.MockStore)
-	checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
-	newRequest    func(testCase *TestCase) (request *http.Request, err error)
-}
 
 func TestGetAccountAPI(t *testing.T) {
 	account := randomAccount()
@@ -297,33 +290,4 @@ func requireBodyMatchAccounts(t *testing.T, body *bytes.Buffer, accounts []db.Ac
 	err = json.Unmarshal(data, &gotAccounts)
 	require.NoError(t, err)
 	require.Equal(t, accounts, gotAccounts)
-}
-
-func runTestCases(t *testing.T, testCases []*TestCase) {
-	for i := range testCases {
-		tc := testCases[i]
-		t.Run(tc.name, func(t *testing.T) {
-			//mock store
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			store := mockdb.NewMockStore(ctrl)
-
-			//bulid stubs
-			tc.bulidStubs(store)
-
-			//new request
-			request, err := tc.newRequest(tc)
-			require.NoError(t, err)
-			//new recorder as response
-			recorder := httptest.NewRecorder()
-			//start test server
-			server := NewServer((store))
-			//send request
-			server.router.ServeHTTP(recorder, request)
-
-			//check response
-			tc.checkResponse(t, recorder)
-
-		})
-	}
 }
