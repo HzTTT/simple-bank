@@ -11,11 +11,12 @@ import (
 )
 
 func CreateAccount(t *testing.T) Account {
+	user := createRandomUser(t)
 	arg := CreateAccountParams{
-		Owner:    util.RandOwner(),
-		Balance:  util.RandMoney(),
-		Currency: util.RandCurrency(),
-	}
+        Owner:    user.Username,
+        Balance:  util.RandMoney(),
+        Currency: util.RandCurrency(),
+    }
 
 	account, err := testQueries.CreateAccount(context.Background(), arg)
 
