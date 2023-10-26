@@ -12,6 +12,8 @@ type Server struct {
 	router *gin.Engine
 }
 
+// NewServer creates a new HTTP server and configures routing.
+// It also sets up the database.
 func NewServer(store db.Store) *Server {
 	server := &Server{store: store}
 	router := gin.Default()
@@ -20,10 +22,12 @@ func NewServer(store db.Store) *Server {
 		v.RegisterValidation("currency", validCurrency)
 	}
 
+	router.POST("/user", server.createUser)
 	router.POST("/account", server.createAccount)
 	router.GET("/account/:id", server.getAccount)
 	router.GET("/account", server.listAccount)
 	router.POST("/transfer", server.Transfer)
+
 	server.router = router
 	return server
 }
