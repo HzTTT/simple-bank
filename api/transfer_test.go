@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	mockdb "github.com/HzTTT/simple_bank/db/mock"
 	db "github.com/HzTTT/simple_bank/db/sqlc"
@@ -17,8 +18,10 @@ import (
 )
 
 func TestTransferAPI(t *testing.T) {
-	account1 := randomAccount()
-	account2 := randomAccount()
+	user1, _ := randomUser(t)
+	account1 := randomAccount(user1.Username)
+	user2, _ := randomUser(t)
+	account2 := randomAccount(user2.Username)
 	account1.Currency = "USD"
 	account2.Currency = "USD"
 	amount := int64(10)
@@ -44,11 +47,12 @@ func TestTransferAPI(t *testing.T) {
 		FromAccount: account1,
 		ToAccount: account2,
 	}
-	newRequest := func(testCase *TestCase) (request *http.Request, err error) {
+	newRequest := func(testCase *TestCase,server *Server) (request *http.Request, err error) {
 		url := "/transfer"
 		data, err := json.Marshal(testCase.request)
 		require.NoError(t, err)
 		request, err = http.NewRequest(http.MethodPost,url,bytes.NewReader(data)) 
+		addAutgorization(t,request,server.tokenMaker,authorizationTypeBearer,user1.Username,time.Minute)
 		return
 	}
 

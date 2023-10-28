@@ -44,10 +44,14 @@ func NewServer(config util.Config, store db.Store) (*Server, error) {
 func (server *Server) setupRouter() {
 	server.router.POST("/user", server.createUser)
 	server.router.POST("/user/login", server.loginUser)
-	server.router.POST("/account", server.createAccount)
-	server.router.GET("/account/:id", server.getAccount)
-	server.router.GET("/account", server.listAccount)
-	server.router.POST("/transfer", server.Transfer)
+
+	authRoutes := server.router.Group("/").Use(authMiddleware(server.tokenMaker))
+
+	authRoutes.POST("/account", server.createAccount)
+	authRoutes.GET("/account/:id", server.getAccount)
+	authRoutes.GET("/account", server.listAccount)
+	
+	authRoutes.POST("/transfer", server.Transfer)
 }
 
 func (server *Server) Start(address string) error {

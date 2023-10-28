@@ -79,19 +79,24 @@ func TestDelectAccount(t *testing.T) {
 }
 
 func TestListAccounts(t *testing.T) {
+	var lastAccount Account
 	for i := 0; i < 10; i++ {
-		CreateAccount(t)
+		lastAccount = CreateAccount(t)
 	}
 
-	arg := ListAccountsParams{Limit: 5, Offset: 5}
+	arg := ListAccountsParams{
+		Limit: 5, 
+		Offset: 0,
+		Owner: lastAccount.Owner,
+	}
 
 	accounts, err := testQueries.ListAccounts(context.Background(), arg)
 
 	require.NoError(t, err)
 	require.NotEmpty(t, accounts)
-	require.Len(t, accounts, 5)
+	require.NotEmpty(t,accounts)
 
 	for _, account := range accounts {
-		require.NotEmpty(t, account)
+		require.Equal(t,lastAccount,account)
 	}
 }

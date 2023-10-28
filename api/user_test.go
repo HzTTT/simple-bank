@@ -53,7 +53,7 @@ func TestCreateUserAPI(t *testing.T) {
 
 	user, password := randomUser(t)
 
-	newRequest := func(testCase *TestCase) (request *http.Request, err error) {
+	newRequest := func(testCase *TestCase,server *Server) (request *http.Request, err error) {
 		body, err := json.Marshal(testCase.request)
 		if err != nil {
 			return nil, err
@@ -188,7 +188,7 @@ func TestCreateUserAPI(t *testing.T) {
 func TestLoginUserAPI(t *testing.T) {
 	user, password := randomUser(t)
 
-	newRequest := func(testCase *TestCase) (request *http.Request, err error) {
+	newRequest := func(testCase *TestCase,server *Server) (request *http.Request, err error) {
 		body, err := json.Marshal(testCase.request)
 		if err != nil {
 			return nil, err

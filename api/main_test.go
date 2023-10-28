@@ -20,7 +20,7 @@ type TestCase struct {
 	request       gin.H
 	bulidStubs    func(store *mockdb.MockStore)
 	checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
-	newRequest    func(testCase *TestCase) (request *http.Request, err error)
+	newRequest    func(testCase *TestCase,server *Server) (request *http.Request, err error)
 }
 
 func TestMain(m *testing.M) {
@@ -51,13 +51,15 @@ func runTestCases(t *testing.T, testCases []*TestCase) {
 			//bulid stubs
 			tc.bulidStubs(store)
 
+			//start test server
+			server := newTestServer(t,store)
+
 			//new request
-			request, err := tc.newRequest(tc)
+			request, err := tc.newRequest(tc,server)
 			require.NoError(t, err)
 			//new recorder as response
 			recorder := httptest.NewRecorder()
-			//start test server
-			server := newTestServer(t,store)
+
 			//send request
 			server.router.ServeHTTP(recorder, request)
 
