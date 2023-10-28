@@ -5,8 +5,11 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	mockdb "github.com/HzTTT/simple_bank/db/mock"
+	db "github.com/HzTTT/simple_bank/db/sqlc"
+	"github.com/HzTTT/simple_bank/util"
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -23,6 +26,17 @@ type TestCase struct {
 func TestMain(m *testing.M) {
     gin.SetMode(gin.TestMode)
     os.Exit(m.Run())
+}
+func newTestServer(t *testing.T,store db.Store) *Server {
+	config := util.Config{
+		TokenSymmetricKey: util.RandomString(32),
+		AccessTokenDuration: time.Minute,
+	}
+
+	server,err := NewServer(config,store)
+	require.NoError(t,err)
+
+	return server
 }
 
 func runTestCases(t *testing.T, testCases []*TestCase) {
@@ -43,7 +57,7 @@ func runTestCases(t *testing.T, testCases []*TestCase) {
 			//new recorder as response
 			recorder := httptest.NewRecorder()
 			//start test server
-			server := NewServer((store))
+			server := newTestServer(t,store)
 			//send request
 			server.router.ServeHTTP(recorder, request)
 

@@ -34,9 +34,9 @@ func (e eqMatcherUserArg) Matches(x interface{}) bool {
 	}
 
 	err := util.CheckPassword(e.password, arg.HashedPassword)
-    if err != nil {
-        return false
-    }
+	if err != nil {
+		return false
+	}
 	e.arg.HashedPassword = arg.HashedPassword
 	return reflect.DeepEqual(e.arg, arg)
 }
@@ -73,13 +73,13 @@ func TestCreateUserAPI(t *testing.T) {
 				"email":     user.Email,
 			},
 			bulidStubs: func(store *mockdb.MockStore) {
-				 arg := db.CreateUserParams{
-				    Username: user.Username,
-				    FullName: user.FullName,
-				    Email: user.Email,
+				arg := db.CreateUserParams{
+					Username: user.Username,
+					FullName: user.FullName,
+					Email:    user.Email,
 				}
 				store.EXPECT().
-					CreateUser(gomock.Any(), EqUserArg(arg,password)).
+					CreateUser(gomock.Any(), EqUserArg(arg, password)).
 					Times(1).
 					Return(user, nil)
 			},
@@ -185,11 +185,48 @@ func TestCreateUserAPI(t *testing.T) {
 	runTestCases(t, testCases)
 }
 
+func TestLoginUserAPI(t *testing.T) {
+	user, password := randomUser(t)
+
+	newRequest := func(testCase *TestCase) (request *http.Request, err error) {
+		body, err := json.Marshal(testCase.request)
+		if err != nil {
+			return nil, err
+		}
+		request = httptest.NewRequest(http.MethodPost,"/user/login",bytes.NewReader(body))
+		request.Header.Set("Content-Type", "application/json")
+		return request, nil
+	}
+	testCases := []*TestCase{
+		{
+			name: "OK",
+			request: gin.H{
+				"username":  user.Username,
+				"password":  password,
+			},
+			bulidStubs: func(store *mockdb.MockStore) {
+
+				store.EXPECT().
+					GetUser(gomock.Any(),gomock.Eq(user.Username)).
+					Times(1).
+					Return(user, nil)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+				requireBodyMatchLoginResponse(t, user, recorder.Body)
+			},
+			newRequest: newRequest,
+		},
+	}
+
+	runTestCases(t,testCases)
+}
+
 func requireBodyMatchUser(t *testing.T, user db.User, body *bytes.Buffer) {
 	data, err := io.ReadAll(body)
 	require.NoError(t, err)
 
-	var gotUser createUserResponse
+	var gotUser userResponse
 	err = json.Unmarshal(data, &gotUser)
 	require.NoError(t, err)
 	require.Equal(t, user.Username, gotUser.Username)
@@ -208,4 +245,18 @@ func randomUser(t *testing.T) (user db.User, password string) {
 		HashedPassword: hashedPassword,
 	}
 	return user, password
+}
+func requireBodyMatchLoginResponse(t *testing.T, user db.User, body *bytes.Buffer) {
+	data, err := io.ReadAll(body)
+	require.NoError(t, err)
+
+	var loginnRespon loginUserResponse
+	err = json.Unmarshal(data, &loginnRespon)
+	require.NoError(t, err)
+
+	require.Equal(t, user.Username, loginnRespon.User.Username)
+	require.Equal(t, user.FullName, loginnRespon.User.FullName)
+	require.Equal(t, user.Email, loginnRespon.User.Email)
+	require.NotZero(t,loginnRespon.AccessToken)
+	fmt.Println(loginnRespon.AccessToken)
 }
