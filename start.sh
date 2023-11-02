@@ -4,6 +4,7 @@
 set -e
 
 echo "run db migration"
+socure /app/app.sh
 /app/migrate -path /app/migration -database "$DB_SOURCE" -verbose up
 
 echo "start the app"
